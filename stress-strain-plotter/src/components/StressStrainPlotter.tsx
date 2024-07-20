@@ -29,7 +29,30 @@ const StressStrainPlotter = () => {
   const calculateMaterialProperties = useMemo(() => {
     if (data.length < 2) return null;
 
-    // ... (keep the existing calculation logic)
+    // Tensile Strength (maximum stress)
+    const tensileStrength = Math.max(...data.map(point => point.stress));
+
+    // Young's Modulus (slope of the linear portion)
+    const linearRegion = data.slice(0, Math.ceil(data.length / 3)); // Assume first third is linear
+    const avgX = linearRegion.reduce((sum, point) => sum + point.strain, 0) / linearRegion.length;
+    const avgY = linearRegion.reduce((sum, point) => sum + point.stress, 0) / linearRegion.length;
+    const numerator = linearRegion.reduce((sum, point) => sum + (point.strain - avgX) * (point.stress - avgY), 0);
+    const denominator = linearRegion.reduce((sum, point) => sum + Math.pow(point.strain - avgX, 2), 0);
+    const youngsModulus = numerator / denominator;
+
+    // Yield Strength (0.2% offset method)
+    const offsetStrain = 0.002; // 0.2% offset
+    const yieldLine = data.map(point => ({
+      strain: point.strain,
+      stress: youngsModulus * (point.strain - offsetStrain)
+    }));
+    let yieldStrength = 0;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].stress >= yieldLine[i].stress) {
+        yieldStrength = data[i].stress;
+        break;
+      }
+    }
 
     return {
       tensileStrength: tensileStrength.toFixed(2),
@@ -50,6 +73,7 @@ const StressStrainPlotter = () => {
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(svgUrl);
     }
   }
 
