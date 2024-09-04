@@ -54,10 +54,20 @@ const StressStrainPlotter = () => {
       }
     }
 
+    // Toughness calculation (area under the stress-strain curve)
+    let toughness = 0;
+    for (let i = 1; i < data.length; i++) {
+      const prevPoint = data[i - 1];
+      const currentPoint = data[i];
+      toughness += (currentPoint.strain - prevPoint.strain) * 
+                   (currentPoint.stress + prevPoint.stress) / 2;
+    }
+
     return {
       tensileStrength: tensileStrength.toFixed(2),
       youngsModulus: youngsModulus.toFixed(2),
-      yieldStrength: yieldStrength.toFixed(2)
+      yieldStrength: yieldStrength.toFixed(2),
+      toughness: toughness.toFixed(4)
     };
   }, [data]);
 
@@ -128,6 +138,7 @@ const StressStrainPlotter = () => {
             <li>Tensile Strength: {calculateMaterialProperties.tensileStrength} MPa</li>
             <li>Young's Modulus: {calculateMaterialProperties.youngsModulus} GPa</li>
             <li>Yield Strength (0.2% offset): {calculateMaterialProperties.yieldStrength} MPa</li>
+            <li>Toughness: {calculateMaterialProperties.toughness} MJ/m³</li>
           </ul>
         </div>
       )}
