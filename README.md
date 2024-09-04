@@ -16,8 +16,8 @@ This is a Next.js application that allows users to plot stress-strain data and c
 ## Getting Started
 
 1. Clone the repository
-2. Install dependencies: `npm install`
-3. Run the development server: `npm run dev`
+2. Install dependencies: `npm install` or 'npx install'
+3. Run the development server: `npm run dev` or 'npx next dev'
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## Technologies Used
