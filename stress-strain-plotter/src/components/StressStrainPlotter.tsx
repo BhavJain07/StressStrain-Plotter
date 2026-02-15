@@ -33,11 +33,12 @@ const StressStrainPlotter = () => {
     const tensileStrength = Math.max(...data.map(point => point.stress));
 
     // Young's Modulus (slope of the linear portion)
-    const linearRegion = data.slice(0, Math.ceil(data.length / 3)); // Assume first third is linear
-    const avgX = linearRegion.reduce((sum, point) => sum + point.strain, 0) / linearRegion.length;
-    const avgY = linearRegion.reduce((sum, point) => sum + point.stress, 0) / linearRegion.length;
-    const numerator = linearRegion.reduce((sum, point) => sum + (point.strain - avgX) * (point.stress - avgY), 0);
-    const denominator = linearRegion.reduce((sum, point) => sum + Math.pow(point.strain - avgX, 2), 0);
+    const linearRegionCutoff = Math.ceil(data.length / 3);
+    const linearRegion = data.slice(0, linearRegionCutoff);
+    const avgStrain = linearRegion.reduce((sum, point) => sum + point.strain, 0) / linearRegion.length;
+    const avgStress = linearRegion.reduce((sum, point) => sum + point.stress, 0) / linearRegion.length;
+    const numerator = linearRegion.reduce((sum, point) => sum + (point.strain - avgStrain) * (point.stress - avgStress), 0);
+    const denominator = linearRegion.reduce((sum, point) => sum + Math.pow(point.strain - avgStrain, 2), 0);
     const youngsModulus = numerator / denominator;
 
     // Yield Strength (0.2% offset method)
@@ -63,11 +64,25 @@ const StressStrainPlotter = () => {
                    (currentPoint.stress + prevPoint.stress) / 2;
     }
 
+    // Ductility (total elongation)
+    const ductility = data[data.length - 1].strain - data[0].strain;
+
+    // Resilience (area under the stress-strain curve up to the yield point)
+    let resilience = 0;
+    for (let i = 1; i < data.length && data[i].stress <= yieldStrength; i++) {
+      const prevPoint = data[i - 1];
+      const currentPoint = data[i];
+      resilience += (currentPoint.strain - prevPoint.strain) * 
+                    (currentPoint.stress + prevPoint.stress) / 2;
+    }
+
     return {
       tensileStrength: tensileStrength.toFixed(2),
-      youngsModulus: youngsModulus.toFixed(2),
+      youngsModulus: (youngsModulus / 1000).toFixed(2), // Convert to GPa
       yieldStrength: yieldStrength.toFixed(2),
-      toughness: toughness.toFixed(4)
+      toughness: toughness.toFixed(4),
+      ductility: ductility.toFixed(4),
+      resilience: resilience.toFixed(4)
     };
   }, [data]);
 
@@ -117,19 +132,18 @@ const StressStrainPlotter = () => {
         <Button onClick={addDataPoint} className="w-1/6">Add Point</Button>
         <Button onClick={clearData} className="w-1/6">Clear</Button>
       </div>
+      <h3 className="text-xl font-semibold mb-2">{graphTitle}</h3>
       <div className="h-80 w-full mb-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart ref={chartRef} data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="strain" label={{ value: 'Strain', position: 'bottom' }} />
-            <YAxis label={{ value: 'Stress', angle: -90, position: 'insideLeft' }} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="stress" stroke="#8884d8" />
-            <text x={300} y={20} textAnchor="middle" dominantBaseline="hanging">{graphTitle}</text>
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart ref={chartRef} data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="strain" label={{ value: 'Strain', position: 'bottom' }} />
+          <YAxis label={{ value: 'Stress', angle: -90, position: 'insideLeft' }} />
+          <Tooltip />
+          <Line type="monotone" dataKey="stress" stroke="#8884d8" />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
       <Button onClick={exportGraph} className="mb-4">Export Graph</Button>
       {calculateMaterialProperties && (
         <div className="mb-4 p-4 bg-gray-100 rounded-md">
@@ -139,6 +153,8 @@ const StressStrainPlotter = () => {
             <li>Young's Modulus: {calculateMaterialProperties.youngsModulus} GPa</li>
             <li>Yield Strength (0.2% offset): {calculateMaterialProperties.yieldStrength} MPa</li>
             <li>Toughness: {calculateMaterialProperties.toughness} MJ/m³</li>
+            <li>Ductility: {calculateMaterialProperties.ductility} mm/mm</li>
+            <li>Resilience: {calculateMaterialProperties.resilience} MJ/m³</li>
           </ul>
         </div>
       )}
@@ -157,5 +173,3 @@ const StressStrainPlotter = () => {
 }
 
 export default StressStrainPlotter
-
-//WIP
